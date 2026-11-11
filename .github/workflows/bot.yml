@@ -1,0 +1,44 @@
+name: Bot OB Deriv
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: bot-ob
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 358
+    env:
+      TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+      CHAT_ID: ${{ secrets.CHAT_ID }}
+      TZ_OFFSET: "1"
+      RUN_MINUTES: "350"
+      DATA_DIR: bot_data
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Restaurer l'état
+        uses: actions/cache/restore@v4
+        with:
+          path: bot_data
+          key: botstate-${{ github.run_id }}
+          restore-keys: botstate-
+      - run: python -u bot.py
+      - name: Sauvegarder l'état
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: bot_data
+          key: botstate-${{ github.run_id }}
